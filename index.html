@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>紫金全球矿业数据库 V3.1</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/shpjs@latest/dist/shp.min.js"></script>
+
+<style>
+html,body{height:100%;margin:0;font-family:"Microsoft YaHei"}
+.app{height:100%;display:grid;grid-template-columns:320px 1fr}
+.sidebar{padding:18px;background:#fff;border-right:1px solid #ddd;overflow:auto}
+.title{font-size:22px;font-weight:bold}
+.menu div{padding:10px;border-bottom:1px solid #eee}
+#map{height:100%}
+.info{margin-top:15px;font-size:13px;color:#555}
+.legend{position:absolute;bottom:20px;left:340px;background:#fff;padding:10px;border-radius:8px;z-index:999}
+</style>
+</head>
+
+<body>
+<div class="app">
+<div class="sidebar">
+<div class="title">紫金全球矿业数据库</div>
+
+<h3>项目区域</h3>
+<div class="menu">
+<div>全球矿区</div>
+<div>中国项目 +</div>
+<div>中亚及俄罗斯项目 +</div>
+<div>欧洲项目 +</div>
+<div>非洲项目 +</div>
+<div>大洋洲项目 +</div>
+<div>南美洲项目 +</div>
+</div>
+
+<h3>矿种</h3>
+<div>🔴 铜矿</div>
+<div>🟡 金矿</div>
+<div>🟢 锌铅</div>
+<div>🔵 锂矿</div>
+
+<div class="info" id="status">
+正在加载矿区数据库...
+</div>
+<div id="list"></div>
+
+</div>
+
+<div style="position:relative">
+<div id="map"></div>
+<div class="legend">
+🔴 矿区边界
+</div>
+</div>
+</div>
+
+<script>
+const tk="33ac08696d718b87238863a0aad7967e";
+
+const map=L.map('map').setView([20,100],3);
+
+L.tileLayer(
+`https://t0.tianditu.gov.cn/img_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=img&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&tk=${tk}`,
+{maxZoom:18}
+).addTo(map);
+
+let layer;
+
+async function loadSHP(){
+ try{
+   const config=await fetch("./data/config.json").then(r=>r.json());
+   const url="./data/"+config.layers.global_polygon;
+
+   const response=await fetch(url);
+   if(!response.ok) throw new Error("ZIP不存在");
+
+   const buffer=await response.arrayBuffer();
+
+   const geojson=await shp(buffer);
+
+   layer=L.geoJSON(geojson,{
+     style:{
+       color:"#e63946",
+       weight:2,
+       fillOpacity:0.15
+     },
+     onEachFeature:(f,l)=>{
+       let name=f.properties.name || f.properties.NAME || "未知矿区";
+       l.bindPopup("<b>"+name+"</b>");
+       let item=document.createElement("div");
+       item.innerHTML=name;
+       item.style.padding="8px";
+       item.style.borderBottom="1px solid #eee";
+       item.onclick=()=>map.fitBounds(l.getBounds());
+       document.getElementById("list").appendChild(item);
+     }
+   }).addTo(map);
+
+   map.fitBounds(layer.getBounds());
+
+   document.getElementById("status").innerHTML=
+   "矿区数据库加载完成";
+
+ }catch(e){
+   document.getElementById("status").innerHTML=
+   "加载失败："+e.message+
+   "<br>请检查 data/global_polygon.zip";
+ }
+}
+
+loadSHP();
+</script>
+
+</body>
+</html>
