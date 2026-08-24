@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>紫金全球矿业数据库</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/shpjs@latest/dist/shp.min.js"></script>
+<style>
+html,body,#map{height:100%;margin:0}
+body{font-family:"Microsoft YaHei",Arial;background:#fff}
+.header{
+position:absolute;top:0;left:0;right:0;height:64px;
+background:rgba(255,255,255,.95);z-index:1000;
+display:flex;align-items:center;padding:0 35px;
+box-shadow:0 2px 8px rgba(0,0,0,.08)
+}
+.logo{font-size:24px;font-weight:bold;color:#008f83}
+.nav span{margin-left:45px;color:#333}
+.panel{
+position:absolute;top:80px;right:35px;width:250px;
+background:#15998d;color:white;z-index:1000
+}
+.panel div{padding:14px;border-bottom:1px solid rgba(255,255,255,.4)}
+.legend{
+position:absolute;bottom:25px;left:40px;background:white;
+padding:15px;z-index:1000;box-shadow:0 2px 8px #aaa
+}
+</style>
+</head>
+<body>
+<div class="header">
+<div class="logo">紫金全球矿业数据库</div>
+<div class="nav">
+<span>全球矿区</span>
+<span>中国矿区</span>
+</div>
+</div>
+
+<div class="panel">
+<div>中国项目　＋</div>
+<div>中亚及俄罗斯项目　＋</div>
+<div>欧洲项目　＋</div>
+<div>非洲项目　＋</div>
+<div>大洋洲项目　＋</div>
+<div>南美洲项目　＋</div>
+</div>
+
+<div id="map"></div>
+
+<div class="legend">
+🔴 铜　 🟡 金　 🟢 锌铅　 🔵 锂　 ⚫ 其他
+</div>
+
+<script>
+const tk="33ac08696d718b87238863a0aad7967e";
+const map=L.map("map").setView([25,105],3);
+
+L.tileLayer(
+`https://t0.tianditu.gov.cn/img_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=img&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&tk=${tk}`
+).addTo(map);
+
+async function loadLayer(){
+ const cfg=await fetch("./data/config.json").then(r=>r.json());
+ const zip=await fetch("./data/"+cfg.layers.global_polygon).then(r=>r.arrayBuffer());
+ const data=await shp(zip);
+
+ L.geoJSON(data,{
+ style:{
+ color:"#009688",
+ weight:2,
+ fillOpacity:.18
+ },
+ onEachFeature:(f,l)=>{
+ let name=f.properties.name||f.properties.NAME||"矿区";
+ l.bindPopup("<b>"+name+"</b>");
+ }
+ }).addTo(map);
+}
+loadLayer().catch(e=>console.log(e));
+</script>
+</body>
+</html>
