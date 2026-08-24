@@ -1,0 +1,16 @@
+{
+  "name": "紫金全球矿业数据库",
+  "version": "V3.0",
+  "layers": {
+    "global_point": "global_point.zip",
+    "global_polygon": "global_polygon.zip",
+    "china_polygon": "china_polygon.zip"
+  },
+  "minerals": [
+    "铜",
+    "金",
+    "锌铅",
+    "锂",
+    "其他"
+  ]
+}
