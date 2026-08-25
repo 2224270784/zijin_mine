@@ -1,1 +1,0 @@
-const CACHE='zijin-v3.4';self.addEventListener('install',e=>self.skipWaiting());self.addEventListener('activate',e=>self.clients.claim());
