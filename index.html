@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>紫金全球矿业数据库 V4.1</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/shpjs@latest/dist/shp.min.js"></script>
+<style>
+html,body,#map{height:100%;margin:0;font-family:"Microsoft YaHei"}
+.header{position:absolute;top:0;left:0;right:0;height:64px;background:#fff;z-index:999;padding:16px 30px;box-shadow:0 2px 8px #ddd;color:#008f83;font-size:22px;font-weight:bold}
+.controls{position:absolute;top:75px;left:20px;z-index:999;background:white;padding:10px}
+.tree{position:absolute;right:20px;top:80px;width:280px;background:#fff;z-index:999;box-shadow:0 2px 8px #999;max-height:70%;overflow:auto}
+.tree .group{padding:10px;border-bottom:1px solid #ddd;font-weight:bold;cursor:pointer}
+.tree .item{padding:8px 20px;border-bottom:1px solid #eee;cursor:pointer;font-size:14px}
+.layerbox{position:absolute;left:20px;bottom:30px;background:white;padding:12px;z-index:999}
+.popup table{border-collapse:collapse}
+.popup td{padding:5px}
+.popup td:first-child{color:#666;width:100px}
+</style>
+</head>
+<body>
+<div class="header">紫金全球矿业数据库</div>
+<div class="controls">
+<button onclick="toggleLayer('mine')">矿区</button>
+<button onclick="toggleLayer('buffer')">缓冲区</button>
+<button onclick="toggleLayer('point')">矿点</button>
+</div>
+<div class="tree" id="tree"></div>
+<div class="layerbox">
+缓冲区：红 0-1km　黄 1-5km　蓝 5-10km　灰 10-50km
+</div>
+<div id="map"></div>
+
+<script>
+const tk="b0a621b97567938401b93e15062220c6";
+const map=L.map("map").setView([25,105],3);
+
+L.tileLayer("https://t{s}.tianditu.gov.cn/DataServer?T=img_w&x={x}&y={y}&l={z}&tk="+tk,
+{s:["0","1","2","3","4","5","6","7"]}).addTo(map);
+
+L.tileLayer("https://t{s}.tianditu.gov.cn/DataServer?T=cia_w&x={x}&y={y}&l={z}&tk="+tk,
+{s:["0","1","2","3","4","5","6","7"]}).addTo(map);
+
+let mineLayer,pointLayer,bufferLayer;
+let projects=[];
+
+function f(p,a){
+for(let x of a){if(p[x]!=null)return p[x]}
+return "-";
+}
+
+function colorMineral(p){
+let m=f(p,["主要矿种","主要矿","矿种"]);
+if(m.includes("铜"))return "#d73027";
+if(m.includes("金"))return "#e6ab02";
+if(m.includes("锂"))return "#4575b4";
+if(m.includes("锌")||m.includes("铅"))return "#1a9850";
+return "#333";
+}
+
+function popup(p){
+return `<div class="popup"><h3>${f(p,["项目名","项目名称","NAME"])}</h3>
+<table>
+<tr><td>地区</td><td>${f(p,["地区"])}</td></tr>
+<tr><td>国家</td><td>${f(p,["国家"])}</td></tr>
+<tr><td>一级行政区</td><td>${f(p,["一级行政区","一级行政"])}</td></tr>
+<tr><td>最近城市</td><td>${f(p,["最近城市","最近城"])}</td></tr>
+<tr><td>主要矿种</td><td>${f(p,["主要矿种","主要矿"])}</td></tr>
+<tr><td>项目状态</td><td>${f(p,["项目状态","项目状"])}</td></tr>
+<tr><td>紫金持股比例</td><td>${f(p,["紫金持股比例","紫金持"])}</td></tr>
+<tr><td>开采方式</td><td>${f(p,["开采方式","开采方"])}</td></tr>
+</table></div>`;
+}
+
+async function shpLoad(file){
+let r=await fetch("./data/"+file);
+return shp(await r.arrayBuffer());
+}
+
+function loadMine(g){
+mineLayer=L.geoJSON(g,{
+style:p=>({color:colorMineral(p.properties||{}),fillColor:colorMineral(p.properties||{}),fillOpacity:.25,weight:2}),
+onEachFeature:(f,l)=>{
+let p=f.properties||{};
+l.bindPopup(popup(p));
+projects.push({name:f.properties["项目名"]||"未命名",region:f.properties["地区"]||"其他",layer:l});
+}
+}).addTo(map);
+}
+
+function loadPoint(g){
+pointLayer=L.geoJSON(g,{
+pointToLayer:(f,lat)=>L.circleMarker(lat,{radius:4,color:colorMineral(f.properties||{}),fillOpacity:1}),
+onEachFeature:(f,l)=>l.bindPopup(popup(f.properties||{}))
+}).addTo(map);
+}
+
+function loadBuffer(g){
+bufferLayer=L.geoJSON(g,{
+style:f=>{
+let s=JSON.stringify(f.properties);
+if(s.includes("1"))return {color:"#d73027",fillOpacity:.05};
+return {color:"#888",fillOpacity:.05};
+},
+interactive:false
+}).addTo(map);
+}
+
+function buildTree(){
+let box=document.getElementById("tree");
+let groups={};
+projects.forEach(p=>{(groups[p.region]??=[]).push(p)});
+Object.keys(groups).forEach(r=>{
+let g=document.createElement("div");
+g.className="group";
+g.innerHTML="▶ "+r;
+let list=document.createElement("div");
+list.style.display="none";
+g.onclick=()=>{list.style.display=list.style.display==="none"?"block":"none"};
+groups[r].forEach(p=>{
+let i=document.createElement("div");
+i.className="item";
+i.innerHTML=p.name;
+i.onclick=()=>{map.fitBounds(p.layer.getBounds());p.layer.openPopup()};
+list.appendChild(i);
+});
+box.appendChild(g);box.appendChild(list);
+});
+}
+
+function toggleLayer(t){
+if(t==="mine"&&mineLayer)map.hasLayer(mineLayer)?map.removeLayer(mineLayer):map.addLayer(mineLayer);
+if(t==="buffer"&&bufferLayer)map.hasLayer(bufferLayer)?map.removeLayer(bufferLayer):map.addLayer(bufferLayer);
+if(t==="point"&&pointLayer)map.hasLayer(pointLayer)?map.removeLayer(pointLayer):map.addLayer(pointLayer);
+}
+
+fetch("./data/config.json").then(r=>r.json()).then(async c=>{
+let m=await shpLoad(c.layers.global_polygon);
+loadMine(m);
+let p=await shpLoad(c.layers.global_point);
+loadPoint(p);
+let b=await shpLoad(c.layers.global_polygon_mul);
+loadBuffer(b);
+setTimeout(buildTree,1000);
+});
+</script>
+</body>
+</html>
