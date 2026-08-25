@@ -1,1 +1,0 @@
-const CACHE='zijin-v4.1';
