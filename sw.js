@@ -1,0 +1,1 @@
+const CACHE='zijin-v3.6';

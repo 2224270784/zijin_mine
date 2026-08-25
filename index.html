@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>紫金全球矿业数据库</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/shpjs@latest/dist/shp.min.js"></script>
+<style>
+html,body,#map{height:100%;margin:0;font-family:"Microsoft YaHei"}
+.header{position:absolute;top:0;left:0;right:0;height:60px;background:#fff;z-index:999;padding:15px 30px;box-sizing:border-box;box-shadow:0 2px 8px #ddd}
+.logo{font-size:22px;font-weight:bold;color:#008f83}
+.menu{position:absolute;right:30px;top:80px;background:#008f83;color:#fff;z-index:999}
+.menu div{padding:12px 25px}
+.popup table{width:100%;border-collapse:collapse}
+.popup td{padding:5px}
+.popup td:first-child{color:#666;width:100px}
+</style>
+</head>
+<body>
+<div class="header"><div class="logo">紫金全球矿业数据库</div></div>
+<div class="menu">
+<div>全球矿区</div>
+<div>中国矿区</div>
+<div>中国项目 +</div>
+<div>非洲项目 +</div>
+<div>欧洲项目 +</div>
+<div>大洋洲项目 +</div>
+<div>南美洲项目 +</div>
+</div>
+<div id="map"></div>
+
+<script>
+const tk="33ac08696d718b87238863a0aad7967e";
+const map=L.map("map").setView([25,105],3);
+
+L.tileLayer(
+'https://t{s}.tianditu.gov.cn/DataServer?T=img_w&x={x}&y={y}&l={z}&tk='+tk,
+{s:"01234567"}
+).addTo(map);
+
+function getField(p,names){
+ for(let n of names){
+   if(p[n]!==undefined && p[n]!==null) return p[n];
+ }
+ return "-";
+}
+
+function popup(p){
+return `<div class="popup">
+<h3>${getField(p,["项目名","项目名称","NAME","name"])}</h3>
+<table>
+<tr><td>地区</td><td>${getField(p,["地区"])}</td></tr>
+<tr><td>国家</td><td>${getField(p,["国家"])}</td></tr>
+<tr><td>一级行政区</td><td>${getField(p,["一级行政区"])}</td></tr>
+<tr><td>最近城市</td><td>${getField(p,["最近城市"])}</td></tr>
+<tr><td>主要矿种</td><td>${getField(p,["主要矿种"])}</td></tr>
+<tr><td>项目状态</td><td>${getField(p,["项目状态"])}</td></tr>
+<tr><td>紫金持股比例</td><td>${getField(p,["紫金持股比例"])}</td></tr>
+<tr><td>开采方式</td><td>${getField(p,["开采方式"])}</td></tr>
+</table></div>`;
+}
+
+async function loadPolygon(file, buffer=false){
+ let r=await fetch("./data/"+file);
+ if(!r.ok)return;
+ let g=await shp(await r.arrayBuffer());
+ L.geoJSON(g,{
+   interactive:!buffer,
+   style: buffer ? {
+      color:"#888",
+      weight:1,
+      fillOpacity:0.05
+   }:{
+      color:"#008f83",
+      weight:2,
+      fillOpacity:0.15
+   },
+   onEachFeature:(f,l)=>{
+      if(!buffer) l.bindPopup(popup(f.properties||{}));
+   }
+ }).addTo(map);
+}
+
+async function loadPoint(file){
+ let r=await fetch("./data/"+file);
+ if(!r.ok)return;
+ let g=await shp(await r.arrayBuffer());
+ L.geoJSON(g,{
+   pointToLayer:(f,latlng)=>L.circleMarker(latlng,{
+      radius:4,
+      color:"#008f83",
+      fillColor:"#008f83",
+      fillOpacity:1
+   }),
+   onEachFeature:(f,l)=>l.bindPopup(popup(f.properties||{}))
+ }).addTo(map);
+}
+
+fetch("./data/config.json").then(r=>r.json()).then(c=>{
+ loadPolygon(c.layers.global_polygon);
+ loadPoint(c.layers.global_point);
+ loadPolygon(c.layers.global_polygon_mul,true);
+ loadPolygon(c.layers.global_point_mul,true);
+ loadPolygon(c.layers.china_polygon_mul,true);
+});
+</script>
+</body>
+</html>
