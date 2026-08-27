@@ -1,0 +1,25 @@
+{
+  "version": "5.10",
+  "layers": {
+    "global_polygon": "zijin_global_Polygon.zip",
+    "global_point": "zijin_global_point.zip",
+    "china_polygon": "zijin_china_Polygon.zip",
+    "global_polygon_mul": "zijin_global_Polygon_mul.zip",
+    "global_point_mul": "zijin_global_point_mul.zip",
+    "china_polygon_mul": "zijin_china_Polygon_mul.zip"
+  },
+  "biodiversity": {
+    "kba": {
+      "file": "kba_merged_by_grouped_mine_all.zip",
+      "layers": ["kba_merged_by_mine_all"]
+    },
+    "wdpa": {
+      "file": "wdpa_polygon_merged_by_grouped_mine_all.zip",
+      "layers": ["wdpa_polygon_merged_by_grouped_mine_all"]
+    },
+    "whc": {
+      "file": "whc_merged_by_grouped_mine_all.zip",
+      "layers": ["whc_merged_by_grouped_mine_all"]
+    }
+  }
+}
