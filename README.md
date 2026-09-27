@@ -1,1 +1,0 @@
-# zijin_mine
